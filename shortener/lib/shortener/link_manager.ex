@@ -1,3 +1,5 @@
+require IEx
+
 defmodule Shortener.LinkManager do
   @moduledoc """
   Manages the lifecycles of links
@@ -13,6 +15,7 @@ defmodule Shortener.LinkManager do
     children = [
       Cache,
       # TODO - Extend this supervision tree to support remote lookups
+      {Task.Supervisor, strategy: :one_for_one, name: @lookup_sup}
     ]
 
     %{
@@ -24,10 +27,15 @@ defmodule Shortener.LinkManager do
 
   def create(url) do
     short_code = generate_short_code(url)
-    Cache.insert(short_code, url)
-    Storage.set(short_code, url)
+    :ok = Storage.set(short_code, url)
+
+    node = Cluster.find_node(short_code)
+    :ok = Cache.insert({Cache, node}, short_code, url)
 
     {:ok, short_code}
+    catch
+      :exit, _ ->
+        {:error, :node_down}
   end
 
   def lookup(short_code) do
@@ -44,6 +52,12 @@ defmodule Shortener.LinkManager do
 
   def remote_lookup(short_code) do
     # TODO - Do a remote lookup
+    node = Cluster.find_node(short_code)
+    task = Task.Supervisor.async({@lookup_sup, node}, __MODULE__, :lookup, [short_code])
+    Task.await(task, 50)
+  catch
+    :exit, _ ->
+      {:error, :node_down}
   end
 
   def generate_short_code(url) do

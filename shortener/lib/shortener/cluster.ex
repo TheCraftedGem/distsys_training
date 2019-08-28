@@ -1,3 +1,4 @@
+require IEx
 defmodule Shortener.Cluster do
   @moduledoc """
   This module provides an interface for updating clusters as well as a
@@ -24,6 +25,9 @@ defmodule Shortener.Cluster do
 
   def find_node(key) do
     # TODO - Update with hash ring lookup
+    # pass ring and node
+    ring = :persistent_term.get(@ring_key)
+    HashRing.find_node(ring, key)
   end
 
   # Sets the canonical set of nodes into persistent storage.
@@ -34,6 +38,13 @@ defmodule Shortener.Cluster do
 
   def update_ring do
 
+    # create hash ring/ insert nodes/ insert into Storage
+    {:ok, nodes} = Storage.get("shortener:cluster")
+    {_, ring} = :erlang.binary_to_term(nodes)
+    |> Enum.reduce({nil, HashRing.new},
+      fn node, {_, ring} -> {_, ring} = HashRing.add_node(ring, node) end)
+
+    :persistent_term.put(@ring_key, ring)
     # TODO - Fetch nodes from persistent store, update hash ring
     # put the hash ring into persistent term storage.
     :ok
