@@ -1,3 +1,5 @@
+require IEx
+
 defmodule PingPong.Producer do
   @moduledoc """
   Sends pings to consumer processes
@@ -33,7 +35,15 @@ defmodule PingPong.Producer do
 
   def handle_call(:get_counts, _from, data) do
     # TODO - Get the count from each consumer
-    map = %{}
+
+    # %{
+    #     n1 => 3,
+    #     n2 => 3,
+    #     Node.self() => 3,
+    #   }
+
+    {map, _} = GenServer.multi_call(Consumer, :total_pings)
+    map = Map.new(map)
     {:reply, map, data}
   end
 
