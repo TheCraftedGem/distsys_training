@@ -1,3 +1,4 @@
+require IEx
 defmodule Shortener.LinkManager.Cache do
   @moduledoc false
   use GenServer
@@ -7,7 +8,10 @@ defmodule Shortener.LinkManager.Cache do
   end
 
   def lookup(cache \\ __MODULE__, key) do
-    # TODO - Do lookup here
+    case :ets.lookup(__MODULE__, key) do
+      [] -> {:error, :not_found}
+      [{_key, value}] -> {:ok, value}
+    end
   end
 
   def insert(cache \\ __MODULE__, key, value) do
@@ -24,7 +28,9 @@ defmodule Shortener.LinkManager.Cache do
 
   def init(args) do
     # TODO - Replace nil with real table
-    {:ok, %{}}
+    table = :ets.new(__MODULE__, [:named_table, :public, :set])
+
+    {:ok, %{table: table}}
   end
 
   def handle_cast({:insert, key, value}, data) do
@@ -34,6 +40,7 @@ defmodule Shortener.LinkManager.Cache do
 
   def handle_call({:insert, key, value}, _from, data) do
     # TODO - Insert the key into the table
+    :ets.insert(data.table, {key, value})
     {:reply, :ok, data}
   end
 

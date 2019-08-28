@@ -11,7 +11,7 @@ defmodule Shortener.Cluster do
   @ring_key {__MODULE__, :hash_ring}
 
   def child_spec(_args) do
-    children = [
+  children = [
       {Cluster.Supervisor, [topology(), [name: Shortener.ClusterSupervisor]]},
     ]
 
@@ -33,6 +33,7 @@ defmodule Shortener.Cluster do
   end
 
   def update_ring do
+
     # TODO - Fetch nodes from persistent store, update hash ring
     # put the hash ring into persistent term storage.
     :ok
